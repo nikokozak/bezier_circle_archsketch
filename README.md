@@ -1,4 +1,4 @@
-![Sketch Pic](bezierCircle.png)
+![Sketch Pic](bezierCicle.png)
 
 ---
 
