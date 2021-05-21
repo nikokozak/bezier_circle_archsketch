@@ -29,7 +29,7 @@ const sketch = (setupDoneCallback: Function) => {
 			p.circle = new BezierCircle(
 				p,
 				{
-					steps: 20,
+					numPoints: 20,
 					contraction_func: (i: number) => { return p.noise(i) * 1 }
 				}
 			);
