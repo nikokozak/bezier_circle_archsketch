@@ -16,38 +16,54 @@ interface DrawBezierParams {
 
 export const BezierCircle = function(p5: any, params: DrawBezierParams)
 {
+	// The P5 instance
 	this.p = p5;
+
 	this.center_x = params.center_x || this.p.width/2;
 	this.center_y = params.center_y || this.p.height/2;
 	this.radius = params.radius || this.p.width/4;
+	this._radius = this.radius;
 
-	// Keep track of step changes.
-
+	// Number of Vertices and change tracking store
 	this.numPoints = params.numPoints || 9; 
 	this._numPoints = this.numPoints;
 
+	// Rotation interval for drawing CP's
 	this.interval = this._makeInterval(this.numPoints);
 
+	// Cycle for change of animation state
 	this.anim_length = params.anim_length || 60;
 
 	this.debug = params.debug;
 
+	// Holds vertices
 	this.points = new Array<any>(50);
 
+	// Defines how vertices are drawn in world
 	this.func_x = setDefaultFunction(params.func_x, (x: number) => Math.sin(x));
 	this.func_y = setDefaultFunction(params.func_y, (y: number) => Math.cos(y));
 
+	// Defines how CP's are drawn in world
 	this.cp_func_x = setDefaultFunction(params.cp_func_x, this.func_x);
 	this.cp_func_y = setDefaultFunction(params.cp_func_y, this.func_y);
 
+	// A scalar function for controlling CP position.
 	this.contraction_func = setDefaultFunction(params.contraction_func, (i: number) => 1);
 
+	// A scalar for the scalar function.
+	this.contraction_scalar = 1;
+
+	// Utility for vertex position.
 	this.calc_x = (i: number) => this.func_x(i) * this.radius + this.center_x;
 	this.calc_y = (i: number) => this.func_y(i) * this.radius + this.center_y;
 
-	this.calc_cp_x = (i: number) => this.cp_func_x(i) * this.radius * this.contraction_func(i) + this.center_x;
-	this.calc_cp_y = (i: number) => this.cp_func_y(i) * this.radius * this.contraction_func(i) + this.center_y;
+	// Utility for CP position.
+	this.calc_cp_x = (i: number) => 
+		this.cp_func_x(i) * this.radius * (this.contraction_func(i) * this.contraction_scalar) + this.center_x;
+	this.calc_cp_y = (i: number) => 
+		this.cp_func_y(i) * this.radius * (this.contraction_func(i) * this.contraction_scalar) + this.center_y;
 
+	// Internal clock util.
 	this.anim_timer = 0;
 
 	this.makePoints();
@@ -55,17 +71,67 @@ export const BezierCircle = function(p5: any, params: DrawBezierParams)
 
 BezierCircle.prototype.makePoints = function() 
 {
-		this.points[0] = this._makeNullVertex();
+	// First shape vertex is "null".	
+	this.points[0] = this._makeNullVertex();
 
-		for (let z = 1; z <= this.numPoints; z++) {
+	for (let z = 1; z <= this.numPoints; z++) {
 
-			const i = this.interval + (this.interval * 2 * (z - 1));
+		const i = this.interval + (this.interval * 2 * (z - 1));
 
-			this.points[z] = this._makeBezierVertex(z, i);
+		this.points[z] = this._makeBezierVertex(z, i);
 
-			this.points[z].cp_tween = this._makeCPTween(this.points[z]);
-			this.points[z].cp_tween.pause();
+		this.points[z].cp_tween = this._makeCPTween(this.points[z]);
+		this.points[z].cp_tween.pause();
+
+	}
+}
+
+BezierCircle.prototype.refresh = function(timer: number)
+{
+	this.anim_timer = (timer % this.anim_length) / (this.anim_length - 1);
+
+	if (this.anim_timer == 0 || this.numPoints != this._numPoints || this.radius != this._radius) {
+		this._refreshPoints();
+	}
+
+	for (let i = 1; i <= this.numPoints; i++) {
+		this.points[i].cp_tween.progress(this.anim_timer);
+	}
+}
+
+BezierCircle.prototype.draw = function()
+{
+	const p = this.p;
+
+	if (!this.hasPoints()) {
+		this.makePoints();
+	}
+
+	p.beginShape();
+
+	p.vertex(this.points[0].x_pos, this.points[0].y_pos);
+
+	for (let i = 1; i <= this._numPoints; i++) {
+
+		p.bezierVertex(
+			this.points[i].cp0x,
+			this.points[i].cp0y,
+			this.points[i].cp1x,
+			this.points[i].cp1y,
+			this.points[i].x_pos,
+			this.points[i].y_pos
+		);
+
+		if (this.debug) 
+		{
+			p.stroke(255, 0, 0);
+			p.strokeWeight(1);
+			p.ellipse( this.points[i].cp0x, this.points[i].cp0y, 5);
+			p.noStroke();
 		}
+	}
+
+	p.endShape();
 }
 
 BezierCircle.prototype._makeInterval = function(numPoints: number)
@@ -184,11 +250,12 @@ BezierCircle.prototype._setNewBezierVertexState = function(bezierVertex: any, cu
 
 BezierCircle.prototype._refreshPoints = function()
 {
-	if (this.numPoints != this._numPoints) {
+	if (this.numPoints != this._numPoints || this.radius != this._radius) {
 		console.log("Steps changed");
 
 		this.interval = this._makeInterval(this.numPoints);
 		this._numPoints = this.numPoints;
+		this._radius = this.radius;
 
 		this.makePoints();
 	}
@@ -204,53 +271,6 @@ BezierCircle.prototype._refreshPoints = function()
 	}
 }
 
-BezierCircle.prototype.refresh = function(timer: number)
-{
-	this.anim_timer = (timer % this.anim_length) / (this.anim_length - 1);
-
-	if (this.anim_timer == 0 || this.numPoints != this._numPoints) {
-		this._refreshPoints();
-	}
-
-	for (let i = 1; i <= this.numPoints; i++) {
-		this.points[i].cp_tween.progress(this.anim_timer);
-	}
-}
-
-BezierCircle.prototype.draw = function()
-{
-	const p = this.p;
-
-	if (!this.hasPoints()) {
-		this.makePoints();
-	}
-
-	p.beginShape();
-
-	p.vertex(this.points[0].x_pos, this.points[0].y_pos);
-
-	for (let i = 1; i <= this._numPoints; i++) {
-
-		p.bezierVertex(
-			this.points[i].cp0x,
-			this.points[i].cp0y,
-			this.points[i].cp1x,
-			this.points[i].cp1y,
-			this.points[i].x_pos,
-			this.points[i].y_pos
-		);
-
-		if (this.debug) 
-		{
-			p.stroke(255, 0, 0);
-			p.strokeWeight(1);
-			p.ellipse( this.points[i].cp0x, this.points[i].cp0y, 5);
-			p.noStroke();
-		}
-	}
-
-	p.endShape();
-}
 
 BezierCircle.prototype.hasPoints = function() {
 		return typeof this.points[0] == "object" && this.points[0].first == true;

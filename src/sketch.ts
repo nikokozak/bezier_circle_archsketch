@@ -12,6 +12,7 @@ const sketch = (setupDoneCallback: Function) => {
 	return (p: any) => {
 
 		p.circle;
+		p.opacitySpeed = 20;
 
 		p.setupDone = (() => {
 			if (setupDoneCallback) {
@@ -37,7 +38,7 @@ const sketch = (setupDoneCallback: Function) => {
 		}
 
 		p.draw = () => {
-			p.fill(0, 20);
+			p.fill(0, p.opacitySpeed);
 			p.rect(0, 0, p.width, p.height);
 			p.circle.refresh(p.frameCount);
 			p.noFill();
