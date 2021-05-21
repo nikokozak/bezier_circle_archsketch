@@ -1,20 +1,10 @@
 import gsap from 'gsap'
 
-interface DrawCircleParams {
+interface DrawBezierParams {
 	center_x?: number;
 	center_y?: number;
 	radius?: number;
-	steps?: number;
-	func_x?: Function;
-	func_y?: Function;
-	debug?: boolean;
-}
-
-interface DrawBezierParams extends DrawCircleParams {
-	center_x?: number;
-	center_y?: number;
-	radius?: number;
-	steps?: number;
+	numPoints?: number;
 	func_x?: Function;
 	func_y?: Function;
 	cp_func_x?: Function;
@@ -26,35 +16,36 @@ interface DrawBezierParams extends DrawCircleParams {
 
 export class BezierCircle {
 
-	p: any;
+	p: any; // P5 Sketch instance
+	debug: boolean; // Used to draw points at CP locations.
 
-	debug: boolean;
 	center_x: number;
 	center_y: number;
 	radius: number;
-	steps: number;
-	private _steps: number;
-	numPoints: number;
-	interval: number;
 
-	func_x: Function;
-	func_y: Function;
+	numPoints: number; // Number of vertices for shape.
+	private _numPoints: number; // Aid for change detection.
 
-	cp_func_x: Function;
-	cp_func_y: Function;
+	interval: number; // Store for rotation interval, used when defining points and CP's.
 
-	points: Array<any>;
+	func_x: Function; // Defines how vertices are placed in the world.
+	func_y: Function; // Defines how vertices are placed in the world.
 
-	private calc_x: Function;
-	private calc_y: Function;
+	cp_func_x: Function; // Defines how CP's are placed in the world.
+	cp_func_y: Function; // Defines how CP's are placed in the world.
 
-	private calc_cp_x: Function;
-	private calc_cp_y: Function;
+	points: Array<any>; // Store for our vertices.
 
-	anim_length: number;
-	private anim_timer: number;
+	private calc_x: Function; // Incorporates radius, position, etc.
+	private calc_y: Function; // Incorporates radius, position, etc.
 
-	contraction_func: Function;
+	private calc_cp_x: Function; // Incorporates radius, position, etc.
+	private calc_cp_y: Function; // Incorporates radius, position, etc.
+
+	anim_length: number; // How fast the animation should cycle to the next state.
+	private anim_timer: number; // Internal animation counter.
+
+	contraction_func: Function; // Defines a scalar for CP positions.
 
 	constructor(p: any, params: DrawBezierParams = {}) {
 
@@ -63,19 +54,19 @@ export class BezierCircle {
 		this.center_x = params.center_x || p.width/2;
 		this.center_y = params.center_y || p.height/2;
 		this.radius = params.radius || p.width/4;
-		this.steps = params.steps || 16;
 
 		// Keep track of step changes.
-		this._steps = this.steps;
 
-		this.numPoints = this.steps / 2 + 1;
-		this.interval = (Math.PI * 2) / this.steps;
+		this.numPoints = params.numPoints || 9; 
+		this._numPoints = this.numPoints;
+
+		this.interval = this.makeInterval(this.numPoints);
 
 		this.anim_length = params.anim_length || 60;
 
 		this.debug = params.debug;
 
-		this.points = new Array<any>(this.numPoints);
+		this.points = new Array<any>(50);
 
 		this.func_x = setDefaultFunction(params.func_x, (x: number) => Math.sin(x));
 		this.func_y = setDefaultFunction(params.func_y, (y: number) => Math.cos(y));
@@ -97,12 +88,15 @@ export class BezierCircle {
 		this.makePoints();
 	}
 
-	makePoints = () => {
+	private makeInterval = (numPoints: number) => {
+		return (Math.PI * 2) / (numPoints * 2);
+	}
 
-		this.points[0] = { 
+	private makeNullVertex = (base: number = 0) => {
+		return {
 			index: 0, 
-			x_pos: this.calc_x(0),
-			y_pos: this.calc_y(0),
+			x_pos: this.calc_x(base),
+			y_pos: this.calc_y(base),
 			first: true,
 
 			cp0x_orig: null,
@@ -118,26 +112,23 @@ export class BezierCircle {
 			cp1y: null,
 			cp1x_next: null,
 			cp1y_next: null,
-		};
+		}
+	}
 
-		let calc_cp_x, calc_cp_y, calc_cp_x_next, calc_cp_y_next;
+	private makeBezierVertex = (index: number, currentInterval: number) => {
+		const calc_cp_x = this.calc_cp_x(currentInterval);
+		const calc_cp_y = this.calc_cp_y(currentInterval);
 
-		for (let i = this.interval, z = 1; i < Math.PI * 2; i += this.interval * 2, z++) {
+		this.p.noiseSeed(Math.random() * 1024);
+		this.p.randomSeed(Math.random() * 1024);
 
-			calc_cp_x = this.calc_cp_x(i);
-			calc_cp_y = this.calc_cp_y(i);
-			
-			this.p.noiseSeed(Math.random() * 1024);
-			this.p.randomSeed(Math.random() * 1024);
+		const calc_cp_x_next = this.calc_cp_x(currentInterval);
+		const calc_cp_y_next = this.calc_cp_y(currentInterval);
 
-			calc_cp_x_next = this.calc_cp_x(i);
-			calc_cp_y_next = this.calc_cp_y(i);
-
-			this.points[z] = {
-
-				index: z,
-				x_pos: this.calc_x(i + this.interval),
-				y_pos: this.calc_y(i + this.interval),
+		return {
+				index: index,
+				x_pos: this.calc_x(currentInterval + this.interval),
+				y_pos: this.calc_y(currentInterval + this.interval),
 				first: false,
 
 				cp0x_orig: calc_cp_x,
@@ -153,94 +144,92 @@ export class BezierCircle {
 				cp1y: calc_cp_y,
 				cp1x_next: calc_cp_x_next,
 				cp1y_next: calc_cp_y_next,
+				}
+	}
 
-			}
-
-			this.points[z].cp_tween = gsap.fromTo(
-				this.points[z],
+	private makeCPTween = (bezierVertex: any, duration: number = 2, type: string = 'elastic') => {
+			return gsap.fromTo(
+				bezierVertex,
 				{
 
-					cp0x: this.points[z].cp0x_orig,
-					cp0y: this.points[z].cp0y_orig,
-					cp1x: this.points[z].cp1x_orig,
-					cp1y: this.points[z].cp1y_orig,
+					cp0x: bezierVertex.cp0x_orig,
+					cp0y: bezierVertex.cp0y_orig,
+					cp1x: bezierVertex.cp1x_orig,
+					cp1y: bezierVertex.cp1y_orig,
 
 				}, 
 				{
 
-					cp0x: this.points[z].cp0x_next,
-					cp0y: this.points[z].cp0y_next,
-					cp1x: this.points[z].cp1x_next,
-					cp1y: this.points[z].cp1y_next,
-					duration: 2,
-					ease: "elastic"
+					cp0x: bezierVertex.cp0x_next,
+					cp0y: bezierVertex.cp0y_next,
+					cp1x: bezierVertex.cp1x_next,
+					cp1y: bezierVertex.cp1y_next,
+					duration: duration,
+					ease: type
 
 				}
 			);
+	}
 
+	private setNewBezierVertexState = (bezierVertex: any, currentInterval: number) => {
+			this.p.noiseSeed(Math.random() * 1024);
+			this.p.randomSeed(Math.random() * 1024);
+
+			const calc_cp_x = this.calc_cp_x(currentInterval);
+			const calc_cp_y = this.calc_cp_y(currentInterval);
+
+			bezierVertex.cp0x_orig = bezierVertex.cp0x_next;
+			bezierVertex.cp0y_orig = bezierVertex.cp0y_next;
+
+			bezierVertex.cp0x = bezierVertex.cp0x_next;
+			bezierVertex.cp0y = bezierVertex.cp0y_next;
+
+			bezierVertex.cp0x_next = calc_cp_x;
+			bezierVertex.cp0y_next = calc_cp_y;
+
+			bezierVertex.cp1x_orig = bezierVertex.cp1x_next;
+			bezierVertex.cp1y_orig = bezierVertex.cp1y_next;
+
+			bezierVertex.cp1x = bezierVertex.cp1x_next;
+			bezierVertex.cp1y = bezierVertex.cp1y_next;
+
+			bezierVertex.cp1x_next = calc_cp_x;
+			bezierVertex.cp1y_next = calc_cp_y;
+	}
+
+	makePoints = () => {
+
+		this.points[0] = this.makeNullVertex();
+
+		for (let z = 1; z <= this.numPoints; z++) {
+
+			const i = this.interval + (this.interval * 2 * (z - 1));
+
+			this.points[z] = this.makeBezierVertex(z, i);
+
+			this.points[z].cp_tween = this.makeCPTween(this.points[z]);
 			this.points[z].cp_tween.pause();
 		}
 	}
 
 	refreshPoints = () => {
 
-		if (this.steps != this._steps) {
+		if (this.numPoints != this._numPoints) {
 			console.log("Steps changed");
 
-			this.interval = (Math.PI * 2) / this.steps;
-			this.numPoints = this.steps / 2 + 1;
-
-			this._steps = this.steps;	
+			this.interval = this.makeInterval(this.numPoints);
+			this._numPoints = this.numPoints;
 
 			this.makePoints();
 		}
 
-		let calc_cp_x, calc_cp_y;
+		for (let z = 1; z <= this.numPoints; z++) {
 
-		for (let i = this.interval, z = 1; i < Math.PI * 2; i += this.interval * 2, z++) {
+			const i = this.interval + (this.interval * 2 * (z - 1));
 
-			this.p.noiseSeed(Math.random() * 1024);
-			this.p.randomSeed(Math.random() * 1024);
+			this.setNewBezierVertexState(this.points[z], i);
 
-			calc_cp_x = this.calc_cp_x(i);
-			calc_cp_y = this.calc_cp_y(i);
-
-			this.points[z].cp0x_orig = this.points[z].cp0x_next;
-			this.points[z].cp0y_orig = this.points[z].cp0y_next;
-
-			this.points[z].cp0x = this.points[z].cp0x_next;
-			this.points[z].cp0y = this.points[z].cp0y_next;
-
-			this.points[z].cp0x_next = calc_cp_x;
-			this.points[z].cp0y_next = calc_cp_y;
-
-			this.points[z].cp1x_orig = this.points[z].cp1x_next;
-			this.points[z].cp1y_orig = this.points[z].cp1y_next;
-
-			this.points[z].cp1x = this.points[z].cp1x_next;
-			this.points[z].cp1y = this.points[z].cp1y_next;
-
-			this.points[z].cp1x_next = calc_cp_x;
-			this.points[z].cp1y_next = calc_cp_y;
-
-			this.points[z].cp_tween = gsap.fromTo(
-				this.points[z],
-				{
-					cp0x: this.points[z].cp0x_orig,
-					cp0y: this.points[z].cp0y_orig,
-					cp1x: this.points[z].cp1x_orig,
-					cp1y: this.points[z].cp1y_orig,
-				}, 
-				{
-					cp0x: this.points[z].cp0x_next,
-					cp0y: this.points[z].cp0y_next,
-					cp1x: this.points[z].cp1x_next,
-					cp1y: this.points[z].cp1y_next,
-					duration: 2,
-					ease: "elastic"
-				}
-			);
-
+			this.points[z].cp_tween = this.makeCPTween(this.points[z]);
 			this.points[z].cp_tween.pause();
 
 		}
@@ -251,13 +240,14 @@ export class BezierCircle {
 
 		this.anim_timer = (timer % this.anim_length) / (this.anim_length - 1);
 
-		for (let i = 1; i < this.numPoints; i++) {
+		if (this.anim_timer == 0 || this.numPoints != this._numPoints) {
+			this.refreshPoints();
+		}
+
+		for (let i = 1; i <= this.numPoints; i++) {
 			this.points[i].cp_tween.progress(this.anim_timer);
 		}
 
-		if (this.anim_timer == 0) {
-			this.refreshPoints();
-		}
 	}
 
 	draw = () => {
@@ -272,7 +262,7 @@ export class BezierCircle {
 
 		p.vertex(this.points[0].x_pos, this.points[0].y_pos);
 
-		for (let i = 1; i < this.numPoints; i++) {
+		for (let i = 1; i <= this._numPoints; i++) {
 
 			p.bezierVertex(
 				this.points[i].cp0x,
@@ -306,24 +296,3 @@ const setDefaultFunction = (paramToCheck: any, defaultFunction: Function) => {
 	else { return defaultFunction }
 }
 
-export const drawCircle = (p: any, params: DrawCircleParams = {}) => {
-
-	const center_x = params.center_x || p.width/2;
-	const center_y = params.center_y || p.height/2;
-	const radius = params.radius || p.width/4;
-	const steps = params.steps || 16;
-	const interval = (Math.PI * 2) / steps;
-	
-	const func_x = setDefaultFunction(params.func_x, (x: number) => Math.sin(x));
-	const func_y = setDefaultFunction(params.func_y, (y: number) => Math.cos(y));
-
-	p.beginShape();
-
-	for (let i = 0; i < Math.PI * 2; i += interval) {
-		const x_val = func_x(i) * radius + center_x;
-		const y_val = func_y(i) * radius + center_y;
-		p.vertex(x_val, y_val);
-	}
-
-	p.endShape();
-}
