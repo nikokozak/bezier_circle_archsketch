@@ -99,7 +99,7 @@ BezierCircle.prototype.refresh = function(timer: number)
 	}
 }
 
-BezierCircle.prototype.draw = function()
+BezierCircle.prototype.draw = function(graphics: any)
 {
 	const p = this.p;
 
@@ -107,13 +107,13 @@ BezierCircle.prototype.draw = function()
 		this.makePoints();
 	}
 
-	p.beginShape();
+	graphics.beginShape();
 
-	p.vertex(this.points[0].x_pos, this.points[0].y_pos);
+	graphics.vertex(this.points[0].x_pos, this.points[0].y_pos);
 
 	for (let i = 1; i <= this._numPoints; i++) {
 
-		p.bezierVertex(
+		graphics.bezierVertex(
 			this.points[i].cp0x,
 			this.points[i].cp0y,
 			this.points[i].cp1x,
@@ -131,7 +131,7 @@ BezierCircle.prototype.draw = function()
 		}
 	}
 
-	p.endShape();
+	graphics.endShape();
 }
 
 BezierCircle.prototype._makeInterval = function(numPoints: number)
