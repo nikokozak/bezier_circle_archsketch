@@ -5,7 +5,8 @@
 	let circle = {numPoints: 0};
 
 	makeSketch('p5',
-	(p) => {circle = p.circle; sketch = p;}
+	(p) => {circle = p.circle; sketch = p;},
+	(p) => {p.fill(0); p.rect(0, 0, 500, 500);}
 	);
 
 	console.log(sketch);

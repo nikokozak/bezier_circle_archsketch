@@ -91,6 +91,7 @@ BezierCircle.prototype.refresh = function(timer: number)
 	this.anim_timer = (timer % this.anim_length) / (this.anim_length - 1);
 
 	if (this.anim_timer == 0 || this.numPoints != this._numPoints || this.radius != this._radius) {
+		this.beforeCycleCallback();
 		this._refreshPoints();
 	}
 
@@ -132,6 +133,11 @@ BezierCircle.prototype.draw = function(graphics: any)
 	}
 
 	graphics.endShape();
+}
+
+BezierCircle.prototype.beforeCycleCallback = function()
+{
+	return null;
 }
 
 BezierCircle.prototype._makeInterval = function(numPoints: number)

@@ -8,7 +8,7 @@ const size = {
 	height: 500
 }
 
-const sketch = (setupDoneCallback: Function) => {
+const sketch = (setupDoneCallback: Function, beforeCycleCallback: Function) => {
 	return (p: any) => {
 
 		p.fader;
@@ -25,9 +25,17 @@ const sketch = (setupDoneCallback: Function) => {
 
 		})();
 
-		p.setup = () => {
+		p.beforeCycle = (() => {
 
-			//p.rectMode(p.CORNER);
+			if (beforeCycleCallback) {
+				return beforeCycleCallback;
+			} else {
+				return (p: any) => { console.log("Circe Before Cycle"); }
+			}
+
+		})();
+
+		p.setup = () => {
 
 			p.createCanvas(size.width, size.height);
 			p.background(0);
@@ -37,13 +45,19 @@ const sketch = (setupDoneCallback: Function) => {
 					contraction_func: (i: number) => { return p.noise(i) * 1 }
 				});
 
+			p.circle.beforeCycleCallback = () => {
+				p.beforeCycle(p);
+			}
+
 			p.setupDone(p);
 
 		}
 
 		p.draw = () => {
 
-			//p.fader.beginDraw();
+			p.fill(0, p.opacitySpeed);
+			p.rect(0, 0, p.width, p.height);
+
 			//p.fill(0, p.opacitySpeed);
 			p.circle.refresh(p.frameCount);
 			p.noFill();
@@ -51,15 +65,12 @@ const sketch = (setupDoneCallback: Function) => {
 			p.strokeWeight(1);
 			p.circle.draw(p);
 
-			p.fill(0, p.opacitySpeed);
-			p.rect(0, 0, p.width, p.height);
-
 		}
 	}
 }
 
-export const makeSketch = (containerId: string, setupDoneCallback: Function = null) => {
+export const makeSketch = (containerId: string, setupDoneCallback: Function = null, beforeCycleCallback: Function = null) => {
 	const container = document.getElementById(containerId);
-	return new p5(sketch(setupDoneCallback), container);
+	return new p5(sketch(setupDoneCallback, beforeCycleCallback), container);
 }
 
