@@ -17,7 +17,7 @@ type SketchParams = {
   beforeCycle?: Function,
 }
 
-const populateDefaultParams = (p: any, params: SketchParams) => {
+const populateDefaultFields = (p: any, params: SketchParams) => {
 
   p.sketchWidth = params.width || 500;
   p.sketchHeight = params.height || 500;
@@ -43,7 +43,7 @@ const sketchSetup = (p: any) => {
       vertices: p.vertices,
       cycleSpeed: p.cycleSpeed,
       contractionSize: p.contractionSize,
-      contraction_func: (i: number) => { return p.noise(i) }
+      contractionFunc: (i: number) => { return p.noise(i) }
     });
 
     // The circle's beforeCycle callback calls the user-provided beforeCycle callback.
@@ -76,7 +76,7 @@ const sketchDraw = (p: any) => {
 const sketch = (params: SketchParams) => {
 	return (p: any) => {
 
-    populateDefaultParams(p, params);
+    populateDefaultFields(p, params);
 
 		p.setup = sketchSetup(p);
 
