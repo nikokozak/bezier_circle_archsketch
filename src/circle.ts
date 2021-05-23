@@ -1,3 +1,4 @@
+import { setDefaultFunction } from './utils.ts'
 import gsap from 'gsap'
 
 interface DrawBezierParams {
@@ -25,7 +26,7 @@ export const BezierCircle = function(p5: any, params: DrawBezierParams)
 	this._radius = this.radius;
 
 	// Number of Vertices and change tracking store
-	this.numPoints = params.numPoints || 9; 
+	this.numPoints = params.numPoints || 9;
 	this._numPoints = this.numPoints;
 
 	// Rotation interval for drawing CP's
@@ -58,9 +59,9 @@ export const BezierCircle = function(p5: any, params: DrawBezierParams)
 	this.calc_y = (i: number) => this.func_y(i) * this.radius + this.center_y;
 
 	// Utility for CP position.
-	this.calc_cp_x = (i: number) => 
+	this.calc_cp_x = (i: number) =>
 		this.cp_func_x(i) * this.radius * (this.contraction_func(i) * this.contraction_scalar) + this.center_x;
-	this.calc_cp_y = (i: number) => 
+	this.calc_cp_y = (i: number) =>
 		this.cp_func_y(i) * this.radius * (this.contraction_func(i) * this.contraction_scalar) + this.center_y;
 
 	// Internal clock util.
@@ -69,9 +70,9 @@ export const BezierCircle = function(p5: any, params: DrawBezierParams)
 	this.makePoints();
 }
 
-BezierCircle.prototype.makePoints = function() 
+BezierCircle.prototype.makePoints = function()
 {
-	// First shape vertex is "null".	
+	// First shape vertex is "null".
 	this.points[0] = this._makeNullVertex();
 
 	for (let z = 1; z <= this.numPoints; z++) {
@@ -90,8 +91,13 @@ BezierCircle.prototype.refresh = function(timer: number)
 {
 	this.anim_timer = (timer % this.anim_length) / (this.anim_length - 1);
 
+  // At end of lifecycle
+  if (this.anim_timer == 1) {
+		this.beforeCycle();
+  }
+
+  // At first count of licycle.
 	if (this.anim_timer == 0 || this.numPoints != this._numPoints || this.radius != this._radius) {
-		this.beforeCycleCallback();
 		this._refreshPoints();
 	}
 
@@ -123,7 +129,7 @@ BezierCircle.prototype.draw = function(graphics: any)
 			this.points[i].y_pos
 		);
 
-		if (this.debug) 
+		if (this.debug)
 		{
 			p.stroke(255, 0, 0);
 			p.strokeWeight(1);
@@ -135,7 +141,7 @@ BezierCircle.prototype.draw = function(graphics: any)
 	graphics.endShape();
 }
 
-BezierCircle.prototype.beforeCycleCallback = function()
+BezierCircle.prototype.beforeCycle = function()
 {
 	return null;
 }
@@ -148,7 +154,7 @@ BezierCircle.prototype._makeInterval = function(numPoints: number)
 BezierCircle.prototype._makeNullVertex = function(base: number = 0)
 {
 	return {
-		index: 0, 
+		index: 0,
 		x_pos: this.calc_x(base),
 		y_pos: this.calc_y(base),
 		first: true,
@@ -213,7 +219,7 @@ BezierCircle.prototype._makeCPTween = function(bezierVertex: any, duration: numb
 				cp1x: bezierVertex.cp1x_orig,
 				cp1y: bezierVertex.cp1y_orig,
 
-			}, 
+			},
 			{
 
 				cp0x: bezierVertex.cp0x_next,
@@ -277,13 +283,7 @@ BezierCircle.prototype._refreshPoints = function()
 	}
 }
 
-
-BezierCircle.prototype.hasPoints = function() {
+BezierCircle.prototype.hasPoints = function()
+{
 		return typeof this.points[0] == "object" && this.points[0].first == true;
 }
-
-const setDefaultFunction = (paramToCheck: any, defaultFunction: Function) => {
-	if (paramToCheck) { return paramToCheck }
-	else { return defaultFunction }
-}
-

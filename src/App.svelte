@@ -1,13 +1,35 @@
 <script lang="ts">
 	import { makeSketch } from './sketch.ts';
-	
-	let sketch = {opacitySpeed: 20};
-	let circle = {numPoints: 0};
 
-	makeSketch('p5',
-	(p) => {circle = p.circle; sketch = p;},
-	(p) => {p.fill(0); p.rect(0, 0, 500, 500);}
-	);
+	let sketch = {opacitySpeed: 20, paused: false};
+	let circle = {numPoints: 0};
+  let paused = false;
+
+	makeSketch(
+    'p5',
+    // On setup, assign internal variables to our Svelte vars.
+    (p) => {
+      circle = p.circle;
+      sketch = p;
+    },
+    // Before a new "iteration" is drawn, reset the background to eliminate trails.
+    (p) => {
+      if (!paused) {
+        p.fill(0);
+        p.rect(0, 0, 500, 500);
+      }
+      if (paused) {
+        sketch.noLoop();
+      }
+    }
+  );
+
+  function pauseSketch()
+  {
+    if (paused) { sketch.loop() }
+    paused = !paused;
+  }
+
 
 	console.log(sketch);
 </script>
@@ -27,6 +49,7 @@
 			<input id="opacity" type="range" min=1 max=125 step=1 bind:value={sketch.opacitySpeed}/>
 			<label for="speed">Cycle Speed: {circle.anim_length}</label>
 			<input id="speed" type="range" min=1 max=600 step=1 bind:value={circle.anim_length}/>
+      <button id="pause" on:click={pauseSketch}>Toggle Pause {paused ? "||" : ">"}</button>
 		</div>
 	</div>
 	<div id="p5"></div>
@@ -53,7 +76,7 @@
 
 	#controls > div {
 		width: 200px;
-	}	
+	}
 
 	@media (min-width: 640px) {
 		main {

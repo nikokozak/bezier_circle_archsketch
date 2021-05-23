@@ -1,5 +1,6 @@
 import p5 from 'p5'
 import {BezierCircle} from './circle'
+import { setDefaultFunction } from './utils.ts'
 
 // -------------- SETUP ---------------- //
 
@@ -11,29 +12,21 @@ const size = {
 const sketch = (setupDoneCallback: Function, beforeCycleCallback: Function) => {
 	return (p: any) => {
 
+    // "Public" vars, communicate with Svelte.
 		p.fader;
 		p.circle;
 		p.opacitySpeed = 12;
+    p.paused = false;
 
-		p.setupDone = (() => {
+    p.setupDone = setDefaultFunction(
+      setupDoneCallback,
+      (p: any) => { console.log("P5 Setup Done"); }
+    )
 
-			if (setupDoneCallback) {
-				return setupDoneCallback;
-			} else {
-				return (p: any) => { console.log("P5 Setup Done"); }
-			}
-
-		})();
-
-		p.beforeCycle = (() => {
-
-			if (beforeCycleCallback) {
-				return beforeCycleCallback;
-			} else {
-				return (p: any) => { console.log("Circe Before Cycle"); }
-			}
-
-		})();
+		p.beforeCycle = setDefaultFunction(
+      beforeCycleCallback,
+      (p: any) => {}
+    )
 
 		p.setup = () => {
 
@@ -45,7 +38,8 @@ const sketch = (setupDoneCallback: Function, beforeCycleCallback: Function) => {
 					contraction_func: (i: number) => { return p.noise(i) * 1 }
 				});
 
-			p.circle.beforeCycleCallback = () => {
+			p.circle.beforeCycle = () => {
+        // if (p.paused) p.noLoop();
 				p.beforeCycle(p);
 			}
 
@@ -55,15 +49,15 @@ const sketch = (setupDoneCallback: Function, beforeCycleCallback: Function) => {
 
 		p.draw = () => {
 
-			p.fill(0, p.opacitySpeed);
-			p.rect(0, 0, p.width, p.height);
-
-			//p.fill(0, p.opacitySpeed);
 			p.circle.refresh(p.frameCount);
+
 			p.noFill();
 			p.stroke(255);
 			p.strokeWeight(1);
 			p.circle.draw(p);
+
+			p.fill(0, p.opacitySpeed);
+			p.rect(0, 0, p.width, p.height);
 
 		}
 	}
@@ -73,4 +67,3 @@ export const makeSketch = (containerId: string, setupDoneCallback: Function = nu
 	const container = document.getElementById(containerId);
 	return new p5(sketch(setupDoneCallback, beforeCycleCallback), container);
 }
-
