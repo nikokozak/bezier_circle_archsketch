@@ -5,23 +5,30 @@
 	let circle = {numPoints: 0};
   let paused = false;
 
-	makeSketch(
-    'p5',
-    // On setup, assign internal variables to our Svelte vars.
-    (p) => {
-      circle = p.circle;
-      sketch = p;
+  const sketchDefaults = {
+    width: 500,
+    height: 500,
+    cycleSpeed: 100,
+    contractionSize: 2,
+
+    setupDone: (p5instance) => {
+      circle = p5instance.circle;
+      sketch = p5instance;
     },
-    // Before a new "iteration" is drawn, reset the background to eliminate trails.
-    (p) => {
+
+    beforeCycle: (p5instance) => {
       if (!paused) {
-        p.fill(0);
-        p.rect(0, 0, 500, 500);
-      }
-      if (paused) {
+        p5instance.fill(0);
+        p5instance.rect(0, 0, 500, 500);
+      } else {
         sketch.noLoop();
       }
     }
+  }
+
+	makeSketch(
+    'p5',
+    sketchDefaults
   );
 
   function pauseSketch()
@@ -37,18 +44,18 @@
 <main>
 	<div id="controls">
 		<div>
-			<label for="numVertices">Number of Vertices: {circle.numPoints}</label>
-			<input id="numVertices" type="range" min=2 max=50 bind:value={circle.numPoints}/>
-			<label for="scalar">Scalar Size: {circle.contraction_scalar}</label>
-			<input id="scalar" type="range" min=0 max=6 step=0.1 bind:value={circle.contraction_scalar}/>
+			<label for="numVertices">Number of Vertices: {circle.vertices}</label>
+			<input id="numVertices" type="range" min=2 max=50 bind:value={circle.vertices}/>
+			<label for="scalar">Scalar Size: {circle.contractionSize}</label>
+			<input id="scalar" type="range" min=0 max=6 step=0.1 bind:value={circle.contractionSize}/>
 			<label for="radius">Radius: {circle.radius}</label>
 			<input id="radius" type="range" min=10 max=250 step=1 bind:value={circle.radius}/>
 		</div>
 		<div>
-			<label for="opacity">Traces Amt: {sketch.opacitySpeed}</label>
-			<input id="opacity" type="range" min=1 max=125 step=1 bind:value={sketch.opacitySpeed}/>
-			<label for="speed">Cycle Speed: {circle.anim_length}</label>
-			<input id="speed" type="range" min=1 max=600 step=1 bind:value={circle.anim_length}/>
+			<label for="opacity">Traces Amt: {sketch.traces}</label>
+			<input id="opacity" type="range" min=0.1 max=20 step=0.1 bind:value={sketch.traces}/>
+			<label for="speed">Cycle Speed: {circle.cycleSpeed}</label>
+			<input id="speed" type="range" min=1 max=600 step=1 bind:value={circle.cycleSpeed}/>
       <button id="pause" on:click={pauseSketch}>Toggle Pause {paused ? "||" : ">"}</button>
 		</div>
 	</div>

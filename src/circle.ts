@@ -2,17 +2,20 @@ import { setDefaultFunction } from './utils.ts'
 import gsap from 'gsap'
 
 interface DrawBezierParams {
+
 	center_x?: number;
 	center_y?: number;
 	radius?: number;
-	numPoints?: number;
+	vertices?: number;
 	func_x?: Function;
 	func_y?: Function;
 	cp_func_x?: Function;
 	cp_func_y?: Function;
 	contraction_func?: Function;
-	anim_length?: number;
+  contractionSize?: number;
+	cycleSpeed?: number;
 	debug?: boolean;
+
 }
 
 export const BezierCircle = function(p5: any, params: DrawBezierParams)
@@ -26,14 +29,14 @@ export const BezierCircle = function(p5: any, params: DrawBezierParams)
 	this._radius = this.radius;
 
 	// Number of Vertices and change tracking store
-	this.numPoints = params.numPoints || 9;
-	this._numPoints = this.numPoints;
+	this.vertices = params.vertices || 9;
+	this._numPoints = this.vertices;
 
 	// Rotation interval for drawing CP's
-	this.interval = this._makeInterval(this.numPoints);
+	this.interval = this._makeInterval(this.vertices);
 
 	// Cycle for change of animation state
-	this.anim_length = params.anim_length || 60;
+	this.cycleSpeed = params.cycleSpeed || 60;
 
 	this.debug = params.debug;
 
@@ -52,7 +55,7 @@ export const BezierCircle = function(p5: any, params: DrawBezierParams)
 	this.contraction_func = setDefaultFunction(params.contraction_func, (i: number) => 1);
 
 	// A scalar for the scalar function.
-	this.contraction_scalar = 1;
+	this.contractionSize = params.contractionSize || 1;
 
 	// Utility for vertex position.
 	this.calc_x = (i: number) => this.func_x(i) * this.radius + this.center_x;
@@ -60,9 +63,9 @@ export const BezierCircle = function(p5: any, params: DrawBezierParams)
 
 	// Utility for CP position.
 	this.calc_cp_x = (i: number) =>
-		this.cp_func_x(i) * this.radius * (this.contraction_func(i) * this.contraction_scalar) + this.center_x;
+		this.cp_func_x(i) * this.radius * (this.contraction_func(i) * this.contractionSize) + this.center_x;
 	this.calc_cp_y = (i: number) =>
-		this.cp_func_y(i) * this.radius * (this.contraction_func(i) * this.contraction_scalar) + this.center_y;
+		this.cp_func_y(i) * this.radius * (this.contraction_func(i) * this.contractionSize) + this.center_y;
 
 	// Internal clock util.
 	this.anim_timer = 0;
@@ -75,7 +78,7 @@ BezierCircle.prototype.makePoints = function()
 	// First shape vertex is "null".
 	this.points[0] = this._makeNullVertex();
 
-	for (let z = 1; z <= this.numPoints; z++) {
+	for (let z = 1; z <= this.vertices; z++) {
 
 		const i = this.interval + (this.interval * 2 * (z - 1));
 
@@ -89,7 +92,7 @@ BezierCircle.prototype.makePoints = function()
 
 BezierCircle.prototype.refresh = function(timer: number)
 {
-	this.anim_timer = (timer % this.anim_length) / (this.anim_length - 1);
+	this.anim_timer = (timer % this.cycleSpeed) / (this.cycleSpeed - 1);
 
   // At end of lifecycle
   if (this.anim_timer == 1) {
@@ -97,11 +100,11 @@ BezierCircle.prototype.refresh = function(timer: number)
   }
 
   // At first count of licycle.
-	if (this.anim_timer == 0 || this.numPoints != this._numPoints || this.radius != this._radius) {
+	if (this.anim_timer == 0 || this.vertices != this._numPoints || this.radius != this._radius) {
 		this._refreshPoints();
 	}
 
-	for (let i = 1; i <= this.numPoints; i++) {
+	for (let i = 1; i <= this.vertices; i++) {
 		this.points[i].cp_tween.progress(this.anim_timer);
 	}
 }
@@ -146,9 +149,9 @@ BezierCircle.prototype.beforeCycle = function()
 	return null;
 }
 
-BezierCircle.prototype._makeInterval = function(numPoints: number)
+BezierCircle.prototype._makeInterval = function(vertices: number)
 {
-	return (Math.PI * 2) / (numPoints * 2);
+	return (Math.PI * 2) / (vertices * 2);
 }
 
 BezierCircle.prototype._makeNullVertex = function(base: number = 0)
@@ -262,17 +265,17 @@ BezierCircle.prototype._setNewBezierVertexState = function(bezierVertex: any, cu
 
 BezierCircle.prototype._refreshPoints = function()
 {
-	if (this.numPoints != this._numPoints || this.radius != this._radius) {
+	if (this.vertices != this._numPoints || this.radius != this._radius) {
 		console.log("Steps changed");
 
-		this.interval = this._makeInterval(this.numPoints);
-		this._numPoints = this.numPoints;
+		this.interval = this._makeInterval(this.vertices);
+		this._numPoints = this.vertices;
 		this._radius = this.radius;
 
 		this.makePoints();
 	}
 
-	for (let z = 1; z <= this.numPoints; z++) {
+	for (let z = 1; z <= this.vertices; z++) {
 
 		const i = this.interval + (this.interval * 2 * (z - 1));
 
