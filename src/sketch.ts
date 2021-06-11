@@ -19,6 +19,7 @@ type SketchParams = {
 
 const populateDefaultFields = (p: any, params: SketchParams) => {
 
+  p.backgroundColor = params.backgroundColor || 40;
   p.sketchWidth = params.width || 500;
   p.sketchHeight = params.height || 500;
   p.radius = params.radius || 100;
@@ -37,7 +38,7 @@ const sketchSetup = (p: any) => {
   return () => {
 
     p.createCanvas(p.sketchWidth, p.sketchHeight);
-    p.background(0);
+    p.background(p.backgroundColor);
 
     p.circle = new BezierCircle(p, {
       vertices: p.vertices,
@@ -67,7 +68,7 @@ const sketchDraw = (p: any) => {
     p.strokeWeight(1);
     p.circle.draw(p);
 
-    p.fill(0, p.traces);
+    p.fill(p.backgroundColor, p.traces);
 		p.rect(0, 0, p.width, p.height);
 
   }

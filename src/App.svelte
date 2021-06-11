@@ -11,7 +11,10 @@
   // Does sketch pause at the end of each cycle.
   let paused = false;
 
+  const backgroundColor = 40;
+
   const sketchDefaults = {
+    backgroundColor,
     width: 500,
     height: 500,
     cycleSpeed: 100,
@@ -25,7 +28,7 @@
 
     beforeCycle: (p5instance) => {
       if (!paused) {
-        p5instance.fill(0);
+        p5instance.fill(backgroundColor);
         p5instance.rect(0, 0, 500, 500);
       } else {
         sketch.noLoop();
