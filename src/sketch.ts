@@ -1,6 +1,6 @@
 import p5 from 'p5'
 import {BezierCircle} from './circle'
-import { setDefaultFunction } from './utils.ts'
+import { setDefaultFunction } from './utils'
 
 // -------------- SETUP ---------------- //
 
@@ -10,6 +10,7 @@ type SketchParams = {
   radius?: number,
   cycleSpeed?: number,
   contractionSize?: number,
+  backgroundColor: number,
   vertices?: number,
   traces?: number,
 
