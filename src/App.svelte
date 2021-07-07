@@ -55,17 +55,25 @@
 		<div>
 			<label for="numVertices">Number of Vertices: {circle.vertices}</label>
 			<input id="numVertices" type="range" min=2 max=50 bind:value={circle.vertices} disabled={!loaded} />
+		</div>
+		<div>
 			<label for="scalar">Scalar Size: {circle.contractionSize}</label>
 			<input id="scalar" type="range" min=0 max=6 step=0.1 bind:value={circle.contractionSize} disabled={!loaded} />
+		</div>
+		<div>
 			<label for="radius">Radius: {circle.radius}</label>
 			<input id="radius" type="range" min=10 max=250 step=1 bind:value={circle.radius} disabled={!loaded} />
 		</div>
 		<div>
 			<label for="opacity">Traces Amt: {sketch.traces}</label>
 			<input id="opacity" type="range" min=0.1 max=20 step=0.1 bind:value={sketch.traces} disabled={!loaded} />
+		</div>
+		<div>
 			<label for="speed">Cycle Speed: {circle.cycleSpeed}</label>
 			<input id="speed" type="range" min=1 max=600 step=1 bind:value={circle.cycleSpeed} disabled={!loaded} />
-      <button id="pause" on:click={pauseSketch}>Toggle Pause {paused ? "||" : ">"}</button>
+		</div>
+		<div>
+			<button id="pause" on:click={pauseSketch}>Toggle Pause {paused ? "||" : ">"}</button>
 		</div>
 	</div>
 	<div id="p5"></div>
@@ -76,7 +84,6 @@
 		text-align: center;
 		padding: 1em;
 		max-width: 240px;
-		margin: 0 auto;
 	}
 
 	p {
@@ -85,18 +92,14 @@
 
 	#controls {
 		display: flex;
+		flex-wrap: wrap;
 		justify-content: space-between;
-		max-width: 500px;
-		margin: 0 auto;
+		width: 400px;
+		margin-bottom: 1rem;
 	}
 
 	#controls > div {
 		width: 200px;
-	}
-
-	@media (min-width: 640px) {
-		main {
-			max-width: none;
-		}
+		margin-top: 1rem;
 	}
 </style>
